@@ -27,6 +27,10 @@ export interface LogEntry {
   result?: 'hit' | 'miss';
   maxReps?: number;
   completedAt: string;
+  /** When the workout screen opened. Absent on logs saved before Health handoff. */
+  startedAt?: string;
+  /** When the last set was logged. Same instant as completedAt. */
+  endedAt?: string;
 }
 
 export type ThemeChoice = 'system' | 'light' | 'dark';
@@ -34,6 +38,8 @@ export type ThemeChoice = 'system' | 'light' | 'dark';
 export interface AppSettings {
   soundEnabled: boolean;
   theme: ThemeChoice;
+  healthLogEnabled: boolean;
+  healthShortcutName: string;
 }
 
 export interface AppState {

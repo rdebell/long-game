@@ -46,6 +46,43 @@ Every push to `main` runs `.github/workflows/pages.yml`. That workflow builds `d
 
 The same `dist/` folder can be uploaded to another static host. This build expects to be served from `/long-game/`.
 
+## Log a workout to Apple Health
+
+A home-screen web app cannot write Apple Health. After a hit or a miss, the result screen shows **Log to Health** when that setting is on (it starts on). The button opens an Apple Shortcut named **Long Game to Health**. Change the name in Settings if you name the shortcut something else. Settings also links to the same steps as this section.
+
+The workout screen stores its open time and the time the last set was logged. The length is the nearest whole minute, and at least 1. Those times stay on the workout in history. Reps stay in Long Game. Health only receives the workout type, the start, and the length.
+
+When the workout ends, Long Game copies the minutes to the clipboard, for example `12`. That is the fallback. The button opens:
+
+```
+shortcuts://run-shortcut?name=Long%20Game%20to%20Health&input=text&text=%7B%22minutes%22%3A12%2C%22start%22%3A%222026-10-27T15%3A04%3A00.000Z%22%7D
+```
+
+The `text` parameter is JSON, so the shortcut can use Get Dictionary from Input:
+
+```
+{"minutes":12,"start":"2026-10-27T15:04:00.000Z"}
+```
+
+`minutes` is the length. `start` is when the workout screen opened, as UTC ISO-8601. For this example the session ran from 15:04 to 15:16. If the URL does not leave Long Game, open the shortcut yourself. With no shortcut input it reads the clipboard, which is only the minute count.
+
+Build the shortcut once in the Shortcuts app:
+
+1. Tap + and name it **Long Game to Health**. The name has to match Settings.
+2. Leave the top action as **Receive Text input from Share Sheet**. The input type stays Text.
+3. Add **If**. Condition: **Shortcut Input** **has any value**. Shortcut Input is what Get Shortcut Input returns, and it is what the button sends.
+4. Inside If, add **Set Variable**. Name it `Payload`. Set it to **Shortcut Input**.
+5. Inside Otherwise, add **Get Clipboard**, then **Set Variable** `Payload` to the **Clipboard**.
+6. Under End If, add a second **If**: `Payload` **begins with** `{`. The JSON starts with a brace. The clipboard is only digits, so it does not.
+7. Inside that If, add **Get Dictionary from Input** and choose `Payload`. **Get Dictionary Value** for `minutes`, and **Set Variable** `Minutes` to it. **Get Dictionary Value** for `start`. **Get Dates from Input** on that text. If you get a list, **Get Item from List** and take the first item. **Set Variable** `Start` to that date. The text looks like `2026-10-27T15:04:00.000Z`. If Get Dates comes back empty, pass the start text itself into the Date field below.
+8. Inside Otherwise, **Set Variable** `Minutes` to `Payload`. Add **Date** set to **Current Date**. Add **Adjust Date** and subtract `Minutes` **minutes**. **Set Variable** `Start` to the adjusted date. That estimates the start as now minus the length.
+9. Under End If, add Health’s **Log Workout**. Type: **Functional Strength Training**. Date: `Start`. Duration: `Minutes`, unit **minutes**. Leave calories and distance empty.
+10. Optional: add **Open URL** with `https://rdebell.github.io/long-game/` if you want a browser tab afterward. The home-screen app stays in the app switcher. Switch back to Long Game if Safari opens instead.
+
+The first run asks permission to write Health data. Allow it. That prompt happens once.
+
+To try the clipboard path, copy `12`, run the shortcut from Shortcuts, and confirm a functional strength workout of 12 minutes. Then finish a workout in Long Game and tap Log to Health.
+
 HTTPS is required for the home-screen install and the service worker. Localhost is the exception.
 
 On iPhone, open the site in Safari, tap Share, then Add to Home Screen. The icon opens full screen. The notch and the home indicator are left clear, and after the first visit the app shell loads offline. Workouts stay in `localStorage` under `long-game/state/v1`. Settings has JSON export and import if you want a copy outside the browser.

@@ -44,6 +44,7 @@ describe('workout results', () => {
     expect(push).toMatchObject({ week: 12, day: 3 });
     expect(state.logs).toHaveLength(1);
     expect(state.logs[0]).toMatchObject({ id: 'hit-1', result: 'hit', targets, actuals: [40, 52, 39, 36, 60] });
+    expect(state.logs[0].startedAt).toBeUndefined();
     expect(buildWorkout(push!.plan, 12, 3).sets.at(-1)!.reps).toBeGreaterThan(55);
   });
 
@@ -80,6 +81,27 @@ describe('workout results', () => {
     });
     expect(hit.state.exercises.find((exercise) => exercise.id === 'push-ups')).toMatchObject({ week: 12, day: 3 });
     expect(hit.state.logs).toHaveLength(3);
+  });
+
+  it('stores the workout start and end when a session time is passed', () => {
+    const startedAt = '2026-10-27T15:04:00.000Z';
+    const endedAt = '2026-10-27T15:16:30.000Z';
+    const { state, decision } = completeWorkout(createSeedState(), {
+      exerciseId: 'push-ups',
+      actuals: [40, 52, 39, 36, 60],
+      now: endedAt,
+      startedAt,
+      id: 'timed',
+    });
+    expect(decision.result).toBe('hit');
+    expect(state.exercises.find((exercise) => exercise.id === 'push-ups')).toMatchObject({ week: 12, day: 3 });
+    expect(state.logs[0]).toMatchObject({
+      id: 'timed',
+      result: 'hit',
+      startedAt,
+      endedAt,
+      completedAt: endedAt,
+    });
   });
 });
 
@@ -145,7 +167,13 @@ describe('settings and retests', () => {
   it('resets training and keeps appearance settings', () => {
     const dirty = {
       ...createSeedState(),
-      settings: { soundEnabled: false, theme: 'dark' as const },
+      settings: {
+        ...createSeedState().settings,
+        soundEnabled: false,
+        theme: 'dark' as const,
+        healthLogEnabled: false,
+        healthShortcutName: 'Desk',
+      },
       logs: createSeedState().logs,
     };
     const reset = resetTraining(dirty);
@@ -164,5 +192,69 @@ describe('backup', () => {
     expect(parseBackup('not json').ok).toBe(false);
     expect(parseBackup('{"version":1,"exercises":[],"logs":[]}').ok).toBe(true);
     expect(parseBackup('{"version":2}').ok).toBe(false);
+  });
+
+  it('loads older saves and keeps workout start and end when present', () => {
+    const older = parseBackup(
+      JSON.stringify({
+        version: 1,
+        exercises: [],
+        logs: [
+          {
+            id: 'old',
+            exerciseId: 'push-ups',
+            kind: 'workout',
+            week: 12,
+            day: 2,
+            targets: [39, 50, 39, 35, 55],
+            actuals: [39, 50, 39, 35, 55],
+            result: 'hit',
+            completedAt: '2026-10-01T15:00:00.000Z',
+            startedAt: 5,
+          },
+          {
+            id: 'timed',
+            exerciseId: 'pull-ups',
+            kind: 'workout',
+            week: 8,
+            day: 3,
+            targets: [1],
+            actuals: [1],
+            result: 'miss',
+            completedAt: '2026-10-27T15:16:00.000Z',
+            startedAt: '2026-10-27T15:04:00.000Z',
+            endedAt: '2026-10-27T15:16:00.000Z',
+          },
+        ],
+        settings: { soundEnabled: false, theme: 'light' },
+      }),
+    );
+    expect(older.ok).toBe(true);
+    if (!older.ok) return;
+    expect(older.state.settings).toEqual({
+      soundEnabled: false,
+      theme: 'light',
+      healthLogEnabled: true,
+      healthShortcutName: 'Long Game to Health',
+    });
+    expect(older.state.logs[0].startedAt).toBeUndefined();
+    expect(older.state.logs[1]).toMatchObject({
+      startedAt: '2026-10-27T15:04:00.000Z',
+      endedAt: '2026-10-27T15:16:00.000Z',
+    });
+    const again = parseBackup(serializeBackup(older.state));
+    expect(again.ok).toBe(true);
+    if (again.ok) expect(again.state.logs[1]).toMatchObject(older.state.logs[1]);
+
+    const off = parseBackup(
+      JSON.stringify({
+        version: 1,
+        exercises: [],
+        logs: [],
+        settings: { healthLogEnabled: false, healthShortcutName: '  Desk  ' },
+      }),
+    );
+    expect(off.ok && off.state.settings.healthLogEnabled).toBe(false);
+    expect(off.ok && off.state.settings.healthShortcutName).toBe('Desk');
   });
 });

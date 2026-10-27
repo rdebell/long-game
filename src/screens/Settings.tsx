@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { DEFAULT_HEALTH_SHORTCUT_NAME } from '../health';
 import { parseBackup, serializeBackup } from '../state/backup';
 import type { AppState, ThemeChoice } from '../state/types';
 import { Button, Dialog, Screen } from '../components/ui';
@@ -11,7 +13,8 @@ const THEMES: { id: ThemeChoice; label: string }[] = [
 ];
 
 export function Settings() {
-  const { state, persisted, setTheme, setSound, replaceState, resetTraining } = useStore();
+  const { state, persisted, setTheme, setSound, setHealthLog, setHealthShortcutName, replaceState, resetTraining } =
+    useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const [pending, setPending] = useState<AppState | null>(null);
@@ -69,6 +72,40 @@ export function Settings() {
           <span>Sound and vibration</span>
           <span>{state.settings.soundEnabled ? 'On' : 'Off'}</span>
         </button>
+      </section>
+      <section className="panel">
+        <h2>Apple Health</h2>
+        <p>
+          After a workout, Log to Health opens an Apple Shortcut. The shortcut writes the start time and the length to
+          Health. Reps stay in this log.
+        </p>
+        <button
+          type="button"
+          className="switch-row"
+          aria-pressed={state.settings.healthLogEnabled}
+          onClick={() => setHealthLog(!state.settings.healthLogEnabled)}
+        >
+          <span>Log to Health</span>
+          <span>{state.settings.healthLogEnabled ? 'On' : 'Off'}</span>
+        </button>
+        <label className="text-field">
+          <span>Shortcut name</span>
+          <input
+            value={state.settings.healthShortcutName}
+            onChange={(event) => setHealthShortcutName(event.target.value)}
+            onBlur={(event) => {
+              const name = event.target.value.trim();
+              setHealthShortcutName(name || DEFAULT_HEALTH_SHORTCUT_NAME);
+            }}
+            autoCapitalize="words"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </label>
+        <Link className="panel-link" to="/health">
+          How to build the shortcut
+        </Link>
       </section>
       <section className="panel">
         <h2>Backup</h2>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { playBeep, vibrateAlert } from '../audio';
+import { copyHealthMinutes, healthHandoff } from '../health';
 import { formatClock, formatSetReps, buildWorkout, type WorkoutTemplate } from '../progression/plan';
 import { Button, Dialog, IconButton, Stepper } from '../components/ui';
 import { useExercise, useStore } from '../store';
@@ -20,6 +21,7 @@ export function WorkoutScreen() {
   const navigate = useNavigate();
   const { completeWorkout, state, setSound } = useStore();
   const sessionRef = useRef<Session | null>(null);
+  const startedAtRef = useRef('');
   if (exercise && !exercise.needsTest && exercise.status !== 'complete' && !sessionRef.current) {
     sessionRef.current = {
       name: exercise.name,
@@ -28,6 +30,7 @@ export function WorkoutScreen() {
       day: exercise.day,
       workout: buildWorkout(exercise.plan, exercise.week, exercise.day),
     };
+    startedAtRef.current = new Date().toISOString();
   }
   const session = sessionRef.current;
   const sets = session?.workout.sets ?? [];
@@ -39,6 +42,7 @@ export function WorkoutScreen() {
   const [restLeft, setRestLeft] = useState(0);
   const [quitOpen, setQuitOpen] = useState(false);
   const [decision, setDecision] = useState<ReturnType<typeof completeWorkout> | null>(null);
+  const [health, setHealth] = useState<{ minutes: number; url: string; copied: boolean } | null>(null);
   const endRef = useRef(0);
   const saving = useRef(false);
   const soundRef = useRef(state.settings.soundEnabled);
@@ -98,7 +102,16 @@ export function WorkoutScreen() {
       return;
     }
     saving.current = true;
-    const result = completeWorkout(id, nextLogged);
+    const startedAt = startedAtRef.current || new Date().toISOString();
+    const endedAt = new Date().toISOString();
+    const result = completeWorkout(id, nextLogged, { startedAt, endedAt });
+    if (state.settings.healthLogEnabled) {
+      const handoff = healthHandoff(startedAt, endedAt, state.settings.healthShortcutName);
+      setHealth({ minutes: handoff.minutes, url: handoff.url, copied: false });
+      void copyHealthMinutes(handoff.minutes).then((copied) => {
+        setHealth((current) => (current && current.url === handoff.url ? { ...current, copied } : current));
+      });
+    }
     setDecision(result);
     setPhase('result');
   }
@@ -164,7 +177,7 @@ export function WorkoutScreen() {
         })}
       </div>
       {phase === 'result' && decision ? (
-        <div className="workout-body">
+        <div className="workout-body result">
           <p className={`result-title ${decision.result}`}>{decision.message}</p>
           <p className="result-next">
             {decision.finished
@@ -181,12 +194,32 @@ export function WorkoutScreen() {
               </li>
             ))}
           </ul>
-          <Button onClick={() => navigate(`/exercise/${exercise.id}`, { replace: true })}>Done</Button>
-          {crossedWeek || decision.finished ? (
-            <Button variant="ghost" onClick={() => navigate(`/test/${exercise.id}?mode=retest`)}>
-              Log a max test
-            </Button>
-          ) : null}
+          <div className="result-actions">
+            {health ? (
+              <>
+                <a
+                  className="btn ghost"
+                  href={health.url}
+                  onClick={() => {
+                    void copyHealthMinutes(health.minutes);
+                  }}
+                >
+                  Log to Health
+                </a>
+                <p className="health-note">
+                  {health.copied
+                    ? `${health.minutes} min is on the clipboard. If this button doesn’t open the shortcut, run it and it will read that number.`
+                    : `${health.minutes} min. This button sends the start time and the length to the shortcut.`}
+                </p>
+              </>
+            ) : null}
+            <Button onClick={() => navigate(`/exercise/${exercise.id}`, { replace: true })}>Done</Button>
+            {crossedWeek || decision.finished ? (
+              <Button variant="ghost" onClick={() => navigate(`/test/${exercise.id}?mode=retest`)}>
+                Log a max test
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : phase === 'rest' || phase === 'go' ? (
         <div className="workout-body">

@@ -15,7 +15,11 @@ import type { AppState, ExerciseDraft, ThemeChoice } from './state/types';
 interface Store {
   state: AppState;
   persisted: boolean;
-  completeWorkout: (exerciseId: string, actuals: number[]) => ProgressDecision;
+  completeWorkout: (
+    exerciseId: string,
+    actuals: number[],
+    timing?: { startedAt: string; endedAt: string },
+  ) => ProgressDecision;
   saveExercise: (exerciseId: string, draft: ExerciseDraft) => { extended: boolean; steep: boolean; error?: string };
   addExercise: (input: {
     name: string;
@@ -31,6 +35,8 @@ interface Store {
   applyRetest: (exerciseId: string, testMax: number) => void;
   setTheme: (theme: ThemeChoice) => void;
   setSound: (enabled: boolean) => void;
+  setHealthLog: (enabled: boolean) => void;
+  setHealthShortcutName: (name: string) => void;
   replaceState: (next: AppState) => void;
   resetTraining: () => void;
 }
@@ -49,8 +55,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       state,
       persisted,
-      completeWorkout: (exerciseId, actuals) => {
-        const result = completeWorkout(state, { exerciseId, actuals, now: new Date().toISOString() });
+      completeWorkout: (exerciseId, actuals, timing) => {
+        const endedAt = timing?.endedAt ?? new Date().toISOString();
+        const result = completeWorkout(state, {
+          exerciseId,
+          actuals,
+          now: endedAt,
+          startedAt: timing?.startedAt,
+        });
         commit(result.state);
         return result.decision;
       },
@@ -73,6 +85,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       setTheme: (theme) => commit({ ...state, settings: { ...state.settings, theme } }),
       setSound: (enabled) => commit({ ...state, settings: { ...state.settings, soundEnabled: enabled } }),
+      setHealthLog: (enabled) => commit({ ...state, settings: { ...state.settings, healthLogEnabled: enabled } }),
+      setHealthShortcutName: (name) =>
+        commit({ ...state, settings: { ...state.settings, healthShortcutName: name } }),
       replaceState: (next) => commit(next),
       resetTraining: () => commit(resetTraining(state)),
     };

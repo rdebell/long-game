@@ -1,3 +1,4 @@
+import { workoutDurationMinutes } from '../health';
 import { chartPoints } from '../state/logic';
 import type { LogEntry } from '../state/types';
 import { useStore } from '../store';
@@ -34,6 +35,9 @@ function LogRow({ log }: { log: LogEntry }) {
         </p>
         <h3>{title}</h3>
         {log.kind === 'workout' ? <p className="log-reps">{log.actuals.join('  ')}</p> : null}
+        {log.startedAt ? (
+          <p className="log-meta">{workoutDurationMinutes(log.startedAt, log.endedAt ?? log.completedAt)} min</p>
+        ) : null}
       </div>
       <time dateTime={log.completedAt}>{label}</time>
     </article>

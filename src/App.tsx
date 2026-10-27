@@ -6,6 +6,7 @@ import { AddExercise } from './screens/Add';
 import { AllWorkouts } from './screens/All';
 import { ChangingScreen } from './screens/Changing';
 import { ExerciseScreen } from './screens/Exercise';
+import { HealthHelp } from './screens/Health';
 import { Home } from './screens/Home';
 import { ProgressScreen } from './screens/Progress';
 import { Settings } from './screens/Settings';
@@ -70,6 +71,7 @@ function Shell() {
           <Route path="/" element={<Home />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/health" element={<HealthHelp />} />
           <Route path="/all" element={<AllWorkouts />} />
           <Route path="/add" element={<AddExercise />} />
           <Route path="/exercise/:id" element={<ExerciseScreen />} />
