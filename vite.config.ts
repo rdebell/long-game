@@ -2,8 +2,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const base = '/long-game/';
+
 export default defineConfig({
-  base: '/',
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -16,8 +18,8 @@ export default defineConfig({
         theme_color: '#EFEAE2',
         background_color: '#EFEAE2',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         lang: 'en',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -27,7 +29,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-        navigateFallback: '/index.html',
+        navigateFallback: `${base}index.html`,
       },
     }),
   ],

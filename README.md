@@ -16,7 +16,7 @@ npm install
 npm run dev
 ```
 
-The dev server is at http://127.0.0.1:43123. The service worker is part of the production build, so use the preview below when you want to check offline or Add to Home Screen.
+The dev server is at http://127.0.0.1:43123/long-game/. The service worker is part of the production build, so use the preview below when you want to check offline or Add to Home Screen.
 
 ```bash
 npm test
@@ -38,7 +38,13 @@ npm run preview
 
 ## Deploy
 
-Upload the **contents** of `dist/` to any static host: Netlify, Cloudflare Pages, Amazon S3, GitHub Pages, or a plain web server. Serve them at the site root. Routes look like `/#/exercise/push-ups`, so the host does not need SPA rewrite rules.
+The public site is [https://rdebell.github.io/long-game/](https://rdebell.github.io/long-game/). The Vite `base` is `/long-game/`, and routes stay on the hash (`/#/exercise/push-ups`).
+
+Every push to `main` runs `.github/workflows/pages.yml`. That workflow builds `dist/` and publishes it to the `gh-pages` branch with the default `GITHUB_TOKEN`. The one manual step is in the GitHub repo: **Settings → Pages → Build and deployment → Deploy from a branch → `gh-pages` / root**.
+
+`public/.nojekyll` is copied into `dist/` so GitHub Pages serves the files as-is.
+
+The same `dist/` folder can be uploaded to another static host. This build expects to be served from `/long-game/`.
 
 HTTPS is required for the home-screen install and the service worker. Localhost is the exception.
 
