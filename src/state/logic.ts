@@ -7,6 +7,7 @@ import {
   relevelUpcoming,
   type ProgressDecision,
 } from '../progression/plan';
+import { defaultHealthSettings } from '../health';
 import type { AppState, Exercise, ExerciseDraft, LogEntry } from './types';
 
 export const STORAGE_KEY = 'long-game/state/v1';
@@ -40,7 +41,7 @@ export function createSeedState(): AppState {
   const pull = planFromPosition({ ...STRUCTURE, ...starterFields(STARTER.pull) });
   return {
     version: 1,
-    settings: { soundEnabled: true, theme: 'system' },
+    settings: { soundEnabled: true, theme: 'system', ...defaultHealthSettings() },
     logs: [],
     exercises: [
       exerciseFrom(STARTER.push, push.plan),
@@ -90,10 +91,11 @@ function replaceExercise(state: AppState, exercise: Exercise): AppState {
 
 export function completeWorkout(
   state: AppState,
-  input: { exerciseId: string; actuals: number[]; now: string; id?: string },
+  input: { exerciseId: string; actuals: number[]; now: string; id?: string; startedAt?: string },
 ): { state: AppState; decision: ProgressDecision } {
   const exercise = findExercise(state, input.exerciseId);
   const decision = decideProgress(exercise.plan, exercise.week, exercise.day, input.actuals);
+  const startedAt = input.startedAt?.trim();
   const log: LogEntry = {
     id: input.id ?? createId(),
     exerciseId: exercise.id,
@@ -104,6 +106,7 @@ export function completeWorkout(
     actuals: input.actuals.slice(),
     result: decision.result,
     completedAt: input.now,
+    ...(startedAt ? { startedAt, endedAt: input.now } : {}),
   };
   const next: Exercise = {
     ...exercise,

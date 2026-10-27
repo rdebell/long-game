@@ -1,3 +1,4 @@
+import { readHealthSettings } from '../health';
 import type { ProgramPlan } from '../progression/plan';
 import type { AppState, Exercise, LogEntry, ThemeChoice } from './types';
 
@@ -87,13 +88,29 @@ function readLog(value: unknown): LogEntry {
     result,
     maxReps: item.maxReps === undefined ? undefined : integer(item.maxReps, 'max reps'),
     completedAt: text(item.completedAt, 'log time'),
+    ...optionalTimes(item),
   };
+}
+
+function optionalTimes(item: Record<string, unknown>): { startedAt?: string; endedAt?: string } {
+  const startedAt = optionalText(item.startedAt);
+  const endedAt = optionalText(item.endedAt);
+  return {
+    ...(startedAt ? { startedAt } : {}),
+    ...(endedAt ? { endedAt } : {}),
+  };
+}
+
+function optionalText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }
 
 function readSettings(value: unknown): AppState['settings'] {
   const item = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const theme: ThemeChoice = item.theme === 'light' || item.theme === 'dark' || item.theme === 'system' ? item.theme : 'system';
-  return { soundEnabled: item.soundEnabled !== false, theme };
+  return { soundEnabled: item.soundEnabled !== false, theme, ...readHealthSettings(item) };
 }
 
 function objectOf(value: unknown, label: string): Record<string, unknown> {
